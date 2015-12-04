@@ -141,14 +141,22 @@ public class CameraUtils {
         // Lower is better
         int bestScore = -1;
 
-        Log.v(TAG, "supported preview sizes: " + sizes);
+        String sizesStr = "supported preview sizes: \n";
+
+        for (Size size : sizes) {
+            sizesStr += size.width + ", " + size.height + "\n";
+        }
+
+        Log.v(TAG, sizesStr);
 
         for (Size size : sizes) {
             //int score = Math.abs(width - size.width) + Math.abs(height - size.height);
 
+            // Get a low res, but not lower than lowLimit
             int score = size.width * size.height;
+            int lowLimit = 160 * 160;
 
-            if (bestScore == -1 || score < bestScore) {
+            if (bestScore == -1 || (score < bestScore & score > lowLimit)) {
                 bestScore = score;
                 bestSize = size;
             }

@@ -99,6 +99,12 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
         lblColorBuffer = (TextView) mRootView.findViewById(R.id.lbl_color_buffer);
 
         imgPreview = (ImageView) mRootView.findViewById(R.id.img_preview);
+        imgPreview.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                analyzeNextPreview = true;
+            }
+        });
 
         return mRootView;
     }
@@ -149,12 +155,13 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
     long t0 = 0;
     int frames = 0;
     boolean doJpegConvert = true;
+    boolean analyzeNextPreview = false;
 
 
     @Override
     public void onBufferUpdated(byte[] bytes) {
         frames++;
-        if (System.currentTimeMillis() - t0 >= 5000) {
+        if (System.currentTimeMillis() - t0 >= 500) {
             //Log.v("blarg", "framerate " + frames);
             frames = 0;
             t0 = System.currentTimeMillis();
@@ -177,6 +184,8 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
             String text = "R: " + rgb[0] + " G: " + rgb[1] + " B: " + rgb[2];
             lblColorBuffer.setText(text);
         } else {
+            if (!analyzeNextPreview) return;
+
             if (bmpColors == null) {
                 bmpColors = new byte[width][height];
                 pixels = new int[width * height];
@@ -196,11 +205,16 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
 
             roundColors(yuvBitmap);
 
-            Log.v(TAG, "round colors took " + (System.currentTimeMillis() - t0));
+            Log.v(scantag, "round colors took " + (System.currentTimeMillis() - t0));
 
             imgPreview.setImageBitmap(copy);
 
-            Log.v("scanner", "scanning");
+            analyzeNextPreview = false;
+
+            int firstColor = yuvBitmap.getPixel(0,0);
+            String text = "R: " + Color.red(firstColor) + " G: " + Color.green(firstColor) + " B: " + Color.blue(firstColor);
+            lblColorBuffer.setText(text);
+
         }
     }
 
@@ -307,7 +321,7 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
                             maxStreak = streak;
                             maxStreakColor = streakColor;
                             streakStart.set(point.x, point.y);
-                            streakEnd.set(w, h);
+                            streakEnd.set(w - 1, h);
                         }
 
                         streak = 0;
@@ -340,11 +354,11 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
                     streakEnd.x = streakStart.x;
                 }
 
-                int approxSquareSize = streakLength / (GRID_SIZE - 1);
-                int halfSquare = approxSquareSize / 2;
+                double approxSquareSize = streakLength / ((double)(GRID_SIZE - 1));
+                double halfSquare = approxSquareSize / 2.0;
 
-                int xLeft = Math.max(0, streakStart.x - halfSquare);
-                int xRight = Math.min(width - 1, streakEnd.x + halfSquare);
+                int xLeft = (int) Math.round(Math.max(0, streakStart.x - halfSquare));
+                int xRight = (int) Math.round(Math.min(width - 1, streakEnd.x + halfSquare));
 
                 int colorLeft = colorFromByte(bmpColors[xLeft][streakStart.y]);
                 int colorRight = colorFromByte(bmpColors[xRight][streakEnd.y]);
@@ -357,21 +371,39 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
                 }
 
                 Point origin = new Point();
+                byte colorByte;
                 // Orientations
                 if (maxStreakColor == Color.RED) {
                     if (colorLeft == Color.GREEN) {
                         Log.v(scantag, "rotated 0");
                         // 0 degrees
-                        origin.x = xLeft;
-                        origin.y = streakStart.y + halfSquare + (halfSquare / 2);
+                        origin.x = Math.round(xLeft);
+                        origin.y = (int)(streakStart.y + halfSquare + (halfSquare / 2));
 
+                        // Mark origin and streak
+                        drawPoint(origin.x, origin.y);
+                        drawPoint(streakStart.x, streakStart.y);
+                        drawPoint(streakEnd.x, streakEnd.y);
+
+                        int fails = 0;
+
+                        int coordX, coordY;
                         for (int y = 0; y < GRID_SIZE; y++) {
                             for (int x = 0; x < GRID_SIZE; x++) {
 
-                                Log.v(scantag, "Color at (" + x + ", " + y + ") is " +
-                                        colorNameFromByte(bmpColors[origin.x + (x * approxSquareSize)][origin.y + (y * approxSquareSize)]));
+                                coordX = (int) Math.round(origin.x + (x * approxSquareSize));
+                                coordY = (int) Math.round(origin.y + (y * approxSquareSize));
+                                colorByte = bmpColors[coordX][coordY];
+
+                                drawPoint(coordX, coordY);
+                                Log.v(scantag, "Color at (" + x + ", " + y + ") is " + colorNameFromByte(colorByte) + " right? " +
+                                        (colorByte == ANSWER[y][x]) + " answer " + colorNameFromByte(ANSWER[y][x]));
+
+                                if (colorByte != ANSWER[y][x]) fails++;
                             }
                         }
+
+                        Log.v(scantag, "Finished, fails: " + fails);
 
                     } else if (colorRight == Color.GREEN) {
 
@@ -382,18 +414,6 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
                     } else if (colorRight == Color.RED) {
                         Log.v(scantag, "Rotated 90");
                         // 90 degrees
-                        origin.x = xRight;
-                        origin.y = streakStart.y + halfSquare;
-
-                        int realColorIdx = 0;
-                        for (int x = 11; x >= 0; x--) {
-                            for (int y = 0; y < 12; y++) {
-
-                                Log.v(scantag, "Color at " + (realColorIdx % GRID_SIZE) + ", " + (realColorIdx / GRID_SIZE) + " is " +
-                                        colorNameFromByte(bmpColors[x * approxSquareSize][y *approxSquareSize]));
-                                realColorIdx++;
-                            }
-                        }
                     }
                 } else {
                     Log.v(scantag, "no origin found");
@@ -402,6 +422,32 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
             }
         }
     }
+
+    public void drawPoint(int x, int y) {
+        Point origin = new Point(x, y);
+        copy.setPixel(origin.x, origin.y, Color.MAGENTA);
+        copy.setPixel(origin.x + 1, origin.y, Color.CYAN);
+        copy.setPixel(origin.x - 1, origin.y, Color.CYAN);
+        copy.setPixel(origin.x, origin.y + 1, Color.CYAN);
+        copy.setPixel(origin.x, origin.y - 1, Color.CYAN);
+    }
+
+    static byte[][] ANSWER = {
+            {RED_BYTE, GREEN_BYTE, BLUE_BYTE, RED_BYTE, GREEN_BYTE, BLUE_BYTE, RED_BYTE, GREEN_BYTE, BLUE_BYTE, RED_BYTE, GREEN_BYTE, BLUE_BYTE},
+            {WHITE_BYTE, RED_BYTE, WHITE_BYTE, RED_BYTE, WHITE_BYTE, RED_BYTE, WHITE_BYTE, RED_BYTE, WHITE_BYTE, RED_BYTE, WHITE_BYTE, RED_BYTE},
+            {RED_BYTE, GREEN_BYTE, BLUE_BYTE, RED_BYTE, GREEN_BYTE, BLUE_BYTE, RED_BYTE, GREEN_BYTE, BLUE_BYTE, RED_BYTE, GREEN_BYTE, BLUE_BYTE},
+            {GREEN_BYTE, GREEN_BYTE, WHITE_BYTE, WHITE_BYTE, GREEN_BYTE, GREEN_BYTE, WHITE_BYTE, WHITE_BYTE, GREEN_BYTE, GREEN_BYTE, WHITE_BYTE, WHITE_BYTE},
+            {RED_BYTE, GREEN_BYTE, BLUE_BYTE, RED_BYTE, GREEN_BYTE, BLUE_BYTE, RED_BYTE, GREEN_BYTE, BLUE_BYTE, RED_BYTE, GREEN_BYTE, BLUE_BYTE},
+            {WHITE_BYTE, RED_BYTE, WHITE_BYTE, RED_BYTE, WHITE_BYTE, RED_BYTE, WHITE_BYTE, RED_BYTE, WHITE_BYTE, RED_BYTE, WHITE_BYTE, RED_BYTE},
+            {RED_BYTE, GREEN_BYTE, BLUE_BYTE, RED_BYTE, GREEN_BYTE, BLUE_BYTE, RED_BYTE, GREEN_BYTE, BLUE_BYTE, RED_BYTE, GREEN_BYTE, BLUE_BYTE},
+            {GREEN_BYTE, GREEN_BYTE, WHITE_BYTE, WHITE_BYTE, GREEN_BYTE, GREEN_BYTE, WHITE_BYTE, WHITE_BYTE, GREEN_BYTE, GREEN_BYTE, WHITE_BYTE, WHITE_BYTE},
+            {RED_BYTE, GREEN_BYTE, BLUE_BYTE, RED_BYTE, GREEN_BYTE, BLUE_BYTE, RED_BYTE, GREEN_BYTE, BLUE_BYTE, RED_BYTE, GREEN_BYTE, BLUE_BYTE},
+            {WHITE_BYTE, RED_BYTE, WHITE_BYTE, RED_BYTE, WHITE_BYTE, RED_BYTE, WHITE_BYTE, RED_BYTE, WHITE_BYTE, RED_BYTE, WHITE_BYTE, RED_BYTE},
+            {RED_BYTE, GREEN_BYTE, BLUE_BYTE, RED_BYTE, GREEN_BYTE, BLUE_BYTE, RED_BYTE, GREEN_BYTE, BLUE_BYTE, RED_BYTE, GREEN_BYTE, BLUE_BYTE},
+            {GREEN_BYTE, GREEN_BYTE, WHITE_BYTE, WHITE_BYTE, GREEN_BYTE, GREEN_BYTE, WHITE_BYTE, WHITE_BYTE, GREEN_BYTE, GREEN_BYTE, WHITE_BYTE, WHITE_BYTE}
+    };
+
+
 
     static int colorFromByte(byte b) {
         if (b == RED_BYTE) {
