@@ -154,7 +154,7 @@ public class CameraUtils {
 
             // Get a low res, but not lower than lowLimit
             int score = size.width * size.height;
-            int lowLimit = 160 * 160;
+            int lowLimit = 150 * 150;
 
             if (bestScore == -1 || (score < bestScore & score > lowLimit)) {
                 bestScore = score;

@@ -9,6 +9,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 import android.widget.Toast;
 
 /**
@@ -26,6 +28,8 @@ public class MainActivity extends FragmentActivity implements CameraFragment.Cam
 
     public CameraFragment cameraFragment;
 
+    Button btnCreate;
+
     @Override
     public void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -39,6 +43,15 @@ public class MainActivity extends FragmentActivity implements CameraFragment.Cam
         setContentView(R.layout.activity_camera);
 
         cameraFragment = (CameraFragment) getSupportFragmentManager().findFragmentById(R.id.fragment_camera);
+
+        btnCreate = (Button) findViewById(R.id.btn_create);
+
+        btnCreate.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(new Intent(MainActivity.this, CreateActivity.class));
+            }
+        });
     }
 
     @SuppressLint("InlinedApi")

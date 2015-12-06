@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">CameraColors</string>
+    <string name="title_activity_create">CreateActivity</string>
 </resources>
