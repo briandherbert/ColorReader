@@ -1,10 +1,7 @@
 package com.meetme.cameracolors;
 
 import android.content.Context;
-import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.ImageFormat;
-import android.graphics.Paint;
 import android.hardware.Camera;
 import android.hardware.Camera.Size;
 import android.os.Build;
@@ -13,7 +10,8 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
 import java.io.IOException;
-import java.util.List;
+
+import static com.meetme.cameracolors.Constants.*;
 
 /** A basic Camera preview class */
 public class CameraPreviewSurface extends SurfaceView implements SurfaceHolder.Callback {
@@ -88,7 +86,7 @@ public class CameraPreviewSurface extends SurfaceView implements SurfaceHolder.C
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
-        Log.v(TAG, "Surface created, setting will not draw");
+        Log.v(TAG, "Surface created");
 
         if (mCamera == null) return;
 
@@ -100,12 +98,7 @@ public class CameraPreviewSurface extends SurfaceView implements SurfaceHolder.C
                 public void onPreviewFrame(byte[] data, Camera camera) {
                     Log.v("blarg", "first preview frame, buffer size " + data.length);
 
-                    postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            mCamera.autoFocus(null);
-                        }
-                    }, 2000);
+                    if (CameraUtils.shouldCallAutofocus()) postDelayed(focusRunnable, AUTOFOCUS_DELAY_MS);
 
                     mCamera.addCallbackBuffer(data);
                     mCamera.setPreviewCallbackWithBuffer(new Camera.PreviewCallback() {
@@ -129,6 +122,7 @@ public class CameraPreviewSurface extends SurfaceView implements SurfaceHolder.C
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
         Log.v(TAG, "Surface destroyed");
+        removeCallbacks(focusRunnable);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH) {
             holder.getSurface().release();
@@ -139,4 +133,11 @@ public class CameraPreviewSurface extends SurfaceView implements SurfaceHolder.C
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
 
     }
+
+    final Runnable focusRunnable = new Runnable() {
+        @Override
+        public void run() {
+            mCamera.autoFocus(null);
+        }
+    };
 }

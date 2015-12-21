@@ -13,6 +13,9 @@ import android.view.Surface;
 
 import java.util.List;
 
+import static com.meetme.cameracolors.Constants.*;
+
+
 /**
  * Utilities to help with setting up a camera
  *
@@ -21,6 +24,8 @@ import java.util.List;
  */
 public class CameraUtils {
     public static final String TAG = "CameraUtils";
+
+    public static String focusMode;
 
     /**
      * Get an instance of the next available camera. If multiple cameras are available, this will rotate through them. If the SDK version is below 9,
@@ -33,7 +38,7 @@ public class CameraUtils {
             try {
                 camera = Camera.open(cameraIdx);
             } catch (RuntimeException e) {
-                Log.w("blarg", "error opening camera", e);
+                Log.w(TAG, "error opening camera", e);
             }
         } else {
             camera = Camera.open();
@@ -49,12 +54,9 @@ public class CameraUtils {
      * @param deviceWidth
      * @param deviceHeight
      * @param isCameraSideways
-     * @param maxWidth
-     * @param maxHeight
      * @return
      */
-    public static Parameters getCameraParams(Parameters params, int deviceWidth, int deviceHeight, boolean isCameraSideways, int maxWidth,
-                                             int maxHeight) {
+    public static Parameters getCameraParams(Parameters params, int deviceWidth, int deviceHeight, boolean isCameraSideways) {
         if (params == null) return null;
 
         // Preview size (best size is the one that matches device dimensions)
@@ -81,8 +83,6 @@ public class CameraUtils {
     public static String getBestFocusMode(Parameters params) {
         if (params == null) return null;
 
-        String focusMode = null;
-
         List<String> focusModes = params.getSupportedFocusModes();
 
         if (focusModes.contains(Parameters.FOCUS_MODE_MACRO)) {
@@ -94,6 +94,13 @@ public class CameraUtils {
         }
 
         return focusMode;
+    }
+
+    public static boolean shouldCallAutofocus() {
+        return (Parameters.FOCUS_MODE_AUTO.equals(focusMode) ||
+                Parameters.FOCUS_MODE_MACRO.equals(focusMode) ||
+                Parameters.FOCUS_MODE_CONTINUOUS_PICTURE.equals(focusMode) ||
+                Parameters.FOCUS_MODE_CONTINUOUS_VIDEO.equals(focusMode));
     }
 
     /**
@@ -154,9 +161,8 @@ public class CameraUtils {
 
             // Get a low res, but not lower than lowLimit
             int score = size.width * size.height;
-            int lowLimit = 160 * 160;
 
-            if (bestScore == -1 || (score < bestScore & score > lowLimit)) {
+            if (bestScore == -1 || (score < bestScore & score > CAMERA_MIN_RESOLUTION)) {
                 bestScore = score;
                 bestSize = size;
             }

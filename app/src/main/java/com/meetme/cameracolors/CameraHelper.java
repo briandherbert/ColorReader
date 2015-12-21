@@ -32,16 +32,14 @@ public class CameraHelper {
     private boolean mIsFrontFacing = false;
     private boolean mIsCameraSideways = false;
     private int mDegreesToRotate = 0;
-    private boolean mHasFlashOnAnyCamera = false;
-    private boolean mIsFlashOn = false;
 
     CameraHelperListener mListener;
 
     public interface CameraHelperListener {
         /**
-         * Called when the camera is successfully initialized; hasFlash indicates whether this specific camera has a flash
+         * Called when the camera is successfully initialized
          */
-        public void onCameraInitialized(boolean hasFlash);
+        public void onCameraInitialized();
 
         public void onCameraInitializeFailed();
     }
@@ -55,7 +53,6 @@ public class CameraHelper {
         mScreenRotation = display.getRotation();
 
         mNumCameras = Camera.getNumberOfCameras();
-        mHasFlashOnAnyCamera = activity.getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH);
     }
 
     public void resume(int camIdx, CameraHelperListener listener) {
@@ -75,16 +72,6 @@ public class CameraHelper {
     public void setParams(Parameters params) {
         if (mCamera == null) return;
         mCamera.setParameters(params);
-    }
-
-    public void setFlash(boolean on) {
-        if (mCamera == null || !mHasFlashOnAnyCamera) return;
-
-        Parameters params = mCamera.getParameters();
-        params.setFlashMode(on ? Parameters.FLASH_MODE_ON : Parameters.FLASH_MODE_OFF);
-        mCamera.setParameters(params);
-
-        mIsFlashOn = on;
     }
 
     /**
@@ -124,22 +111,19 @@ public class CameraHelper {
 
         mCamera.setDisplayOrientation(mDegreesToRotate);
 
-        int maxDimen = 1000;
-
         // Get and set params
-        Parameters params = CameraUtils.getCameraParams(mCamera.getParameters(), mScreenWidth, mScreenHeight, mIsCameraSideways, maxDimen, maxDimen);
+        Parameters params = CameraUtils.getCameraParams(mCamera.getParameters(), mScreenWidth, mScreenHeight, mIsCameraSideways);
 
         params.setJpegQuality(70);
 
         if (params != null) {
             // The flash needs to get reset after every picture
-            params.setFlashMode(mHasFlashOnAnyCamera && mIsFlashOn ? Parameters.FLASH_MODE_ON : Parameters.FLASH_MODE_OFF);
             mCamera.setParameters(params);
 
         }
 
         if (mListener != null) {
-            mListener.onCameraInitialized(mHasFlashOnAnyCamera && !mIsFrontFacing);
+            mListener.onCameraInitialized();
         }
     }
 
@@ -213,10 +197,6 @@ public class CameraHelper {
 
     public int getCameraIdx() {
         return mCameraIdx;
-    }
-
-    public boolean hasFlashOnAnyCamera() {
-        return mHasFlashOnAnyCamera;
     }
 
     public int getNumCameras() {
