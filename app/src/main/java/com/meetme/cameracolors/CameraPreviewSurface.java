@@ -100,7 +100,12 @@ public class CameraPreviewSurface extends SurfaceView implements SurfaceHolder.C
                 public void onPreviewFrame(byte[] data, Camera camera) {
                     Log.v("blarg", "first preview frame, buffer size " + data.length);
 
-                    //mCamera.autoFocus(null);
+                    postDelayed(new Runnable() {
+                        @Override
+                        public void run() {
+                            mCamera.autoFocus(null);
+                        }
+                    }, 2000);
 
                     mCamera.addCallbackBuffer(data);
                     mCamera.setPreviewCallbackWithBuffer(new Camera.PreviewCallback() {

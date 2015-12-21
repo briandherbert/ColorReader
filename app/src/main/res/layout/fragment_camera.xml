@@ -28,10 +28,11 @@
 
     <TextView
         android:id="@+id/lbl_color_buffer"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_centerInParent="true"
-        android:background="#8f00"
+        android:maxLines="1"
+        android:background="#f0f"
         android:text="color is red"
-        android:textSize="22sp" />
+        android:textSize="16sp" />
 </RelativeLayout>

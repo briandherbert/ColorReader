@@ -8,13 +8,13 @@ import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
 
+import static com.meetme.cameracolors.Constants.*;
+
 /**
  * TODO: document your custom view class.
  */
 public class ColorsView extends View {
     static final String TAG = ColorsView.class.getSimpleName();
-
-    static final int NUM_SQUARES_PER_SIDE = 12;
 
     int width = 0;
     int height = 0;
@@ -27,12 +27,6 @@ public class ColorsView extends View {
 
     byte[] colorBytes;
 
-    static byte RED_BYTE = (byte) 0;
-    static byte GREEN_BYTE = (byte) 1;
-    static byte BLUE_BYTE = (byte) 2;
-    static byte WHITE_BYTE = (byte) 3;
-
-    static final int NUM_COLORS = 4;
 
     Paint paint = new Paint();
     Paint redPaint = new Paint();
@@ -79,7 +73,7 @@ public class ColorsView extends View {
     public void convertStringToColorBytes(String str) {
         byte[] bytes = stringToBytesASCII(str);
 
-        colorBytes = new byte[bytes.length * 4];
+        colorBytes = new byte[bytes.length * NUM_COLORS];
 
         byte b;
 
@@ -138,7 +132,7 @@ public class ColorsView extends View {
         for (int y = 0; y < NUM_SQUARES_PER_SIDE; y++) {
             for (int x = 0; x < NUM_SQUARES_PER_SIDE; x++) {
                 paint.setColor(
-                        CameraFragment.colorFromByte(
+                        colorFromByte(
                                 colorBytes[Math.min(y * NUM_SQUARES_PER_SIDE + x, colorBytes.length - 1)]));
 
                 canvas.drawRect(halfSquare + x * squareSize,

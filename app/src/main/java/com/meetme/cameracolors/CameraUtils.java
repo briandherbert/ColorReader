@@ -85,10 +85,10 @@ public class CameraUtils {
 
         List<String> focusModes = params.getSupportedFocusModes();
 
-        if (focusModes.contains(Parameters.FOCUS_MODE_FIXED)) {
-            focusMode = Parameters.FOCUS_MODE_FIXED;
-        } else if (focusModes.contains(Parameters.FOCUS_MODE_MACRO)) {
+        if (focusModes.contains(Parameters.FOCUS_MODE_MACRO)) {
             focusMode = Parameters.FOCUS_MODE_MACRO;
+        } else if (focusModes.contains(Parameters.FOCUS_MODE_FIXED)) {
+            focusMode = Parameters.FOCUS_MODE_FIXED;
         } else if (focusModes.contains(Parameters.FOCUS_MODE_AUTO)) {
             focusMode = Parameters.FOCUS_MODE_AUTO;
         }
@@ -154,7 +154,7 @@ public class CameraUtils {
 
             // Get a low res, but not lower than lowLimit
             int score = size.width * size.height;
-            int lowLimit = 150 * 150;
+            int lowLimit = 160 * 160;
 
             if (bestScore == -1 || (score < bestScore & score > lowLimit)) {
                 bestScore = score;
