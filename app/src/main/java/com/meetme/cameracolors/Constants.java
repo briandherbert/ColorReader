@@ -17,11 +17,11 @@ public class Constants {
     public static byte RED_BYTE = (byte) 0;
     public static byte GREEN_BYTE = (byte) 1;
     public static byte BLUE_BYTE = (byte) 2;
-    public static byte CYAN_BYTE = (byte) 7;
-    public static byte MAGENTA_BYTE = (byte) 4;
-    public static byte YELLOW_BYTE = (byte) 5;
-    public static byte BLACK_BYTE = (byte) 6;
     public static byte WHITE_BYTE = (byte) 3;
+    public static byte CYAN_BYTE = (byte) 4;    // #0FF
+    public static byte MAGENTA_BYTE = (byte) 5; // #F0F
+    public static byte YELLOW_BYTE = (byte) 6;  // #FF0
+    public static byte BLACK_BYTE = (byte) 7;
 
     static String colorNameFromByte(byte b) {
         if (b == RED_BYTE) {
@@ -34,6 +34,8 @@ public class Constants {
             return "magenta";
         } else if (b == WHITE_BYTE) {
             return "white";
+        } else if (b == YELLOW_BYTE) {
+            return "yellow";
         }
 
         return "black";

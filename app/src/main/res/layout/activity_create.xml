@@ -16,7 +16,7 @@
 
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Hello world"
+        android:text="Once upon a midnight dreary, while I pondered"
         android:layout_marginTop="20dp"
         android:maxLines="4" />
 

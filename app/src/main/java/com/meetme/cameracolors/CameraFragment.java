@@ -312,7 +312,10 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
                     if (streakColor == Color.BLACK && (pxColor == Color.RED || pxColor == Color.GREEN || pxColor == Color.BLUE)) {
                         streakColor = pxColor;
                     }
-                } else if ((numFloors == 1 || numFloors == 0) && max > WHITE_MIN_VAL) {
+                } else if (NUM_COLORS == 8 && numFloors == 1) {
+                    pxColor = r == 0 ? Color.CYAN : g == 0 ? Color.MAGENTA : Color.YELLOW;
+                    bmpColors[w][h] = r == 0 ? CYAN_BYTE : g == 0 ? MAGENTA_BYTE : YELLOW_BYTE;
+                } else if ((numFloors == 0 || numFloors == 1) && max > WHITE_MIN_VAL) {
                     pxColor = Color.WHITE;
                     bmpColors[w][h] = WHITE_BYTE;
                 } else {
@@ -578,6 +581,8 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
                 idx++;
             }
         }
+
+        message += ((char) sumInt);
 
         lblMessage.setText(message);
     }
