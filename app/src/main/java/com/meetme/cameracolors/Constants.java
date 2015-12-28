@@ -11,7 +11,7 @@ public class Constants {
     static final int CAMERA_MIN_RESOLUTION = CAMERA_MIN_RESOLUTION_SIDE * CAMERA_MIN_RESOLUTION_SIDE;
     static final int AUTOFOCUS_DELAY_MS = 4000;
 
-    static final int MS_PER_MESSAGE = 250;
+    static final int MS_PER_MESSAGE = 500;
 
     static final int NUM_SQUARES_PER_SIDE = 12;
     static final int NUM_COLORS = 4;

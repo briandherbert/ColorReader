@@ -119,6 +119,13 @@ public class CameraPreviewSurface extends SurfaceView implements SurfaceHolder.C
         }
     }
 
+    public void tryFocus() {
+        if (!CameraUtils.shouldCallAutofocus()) return;
+
+        removeCallbacks(focusRunnable);
+        post(focusRunnable);
+    }
+
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
         Log.v(TAG, "Surface destroyed");
