@@ -9,10 +9,15 @@ public class Constants {
     // Camera
     static final int CAMERA_MIN_RESOLUTION_SIDE = 160;
     static final int CAMERA_MIN_RESOLUTION = CAMERA_MIN_RESOLUTION_SIDE * CAMERA_MIN_RESOLUTION_SIDE;
-    static final int AUTOFOCUS_DELAY_MS = 2000;
+    static final int AUTOFOCUS_DELAY_MS = 4000;
+
+    static final int MS_PER_MESSAGE = 250;
 
     static final int NUM_SQUARES_PER_SIDE = 12;
     static final int NUM_COLORS = 4;
+
+    static final int COLORS_PER_CHAR = (NUM_COLORS == 4) ? 4 : 3;
+    static final int CHARS_PER_CHUNK = ((NUM_SQUARES_PER_SIDE * NUM_SQUARES_PER_SIDE)) / COLORS_PER_CHAR;
 
     public static byte RED_BYTE = (byte) 0;
     public static byte GREEN_BYTE = (byte) 1;
@@ -108,6 +113,10 @@ public class Constants {
             default:
                 return -1;
         }
+    }
+
+    static int numColorsPerChar() {
+        return (NUM_COLORS == 4) ? 4 : 3;
     }
 
     static byte[][] ANSWER = {

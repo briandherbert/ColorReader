@@ -36,7 +36,7 @@ import com.meetme.cameracolors.CameraPreviewSurface.BufferUpdateCallback;
 public class CameraFragment extends Fragment implements CameraHelper.CameraHelperListener, BufferUpdateCallback {
     public static final String TAG = "CameraFragment";
 
-    boolean showBmp = true;
+    boolean showBmp = false;
 
     private CameraPreviewSurface mPreviewSurface;
 
@@ -154,13 +154,10 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
     @Override
     public void onBufferUpdated(byte[] bytes) {
         frames++;
-        if (System.currentTimeMillis() - t0 >= 500) {
+        if (System.currentTimeMillis() - t0 >= 1000) {
             Log.v(STATS_TAG, "framerate " + frames);
             frames = 0;
             t0 = System.currentTimeMillis();
-
-        } else {
-            return;
         }
 
         height = mPreviewSurface.getPreviewWidth();
@@ -175,7 +172,7 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
             lblMessage.setText(text);
         } else {
             if (!analyzeNextPreview) return;
-            analyzeNextPreview = false;
+            //analyzeNextPreview = false;
 
             Log.v(STATS_TAG, "Width " + width + " height " + height);
 
@@ -583,6 +580,8 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
         }
 
         message += ((char) sumInt);
+
+        Log.v(TAG, "Message: " + message);
 
         lblMessage.setText(message);
     }

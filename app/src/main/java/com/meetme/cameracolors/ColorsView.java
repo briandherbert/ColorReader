@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.os.Handler;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
@@ -25,8 +26,12 @@ public class ColorsView extends View {
 
     String message = "";
 
-    byte[] colorBytes;
+    // [chunkIdx][bytes]
+    byte[][] colorBytes;
 
+    long mDrawStartTime = 0;
+    long mLastChunkUpdateTime = 0;
+    int mCurrentChunkIdx = 0;
 
     Paint paint = new Paint();
     Paint redPaint = new Paint();
@@ -51,10 +56,10 @@ public class ColorsView extends View {
     }
 
     public void init() {
-        colorBytes = new byte[NUM_SQUARES_PER_SIDE * NUM_SQUARES_PER_SIDE];
+        colorBytes = new byte[1][NUM_SQUARES_PER_SIDE * NUM_SQUARES_PER_SIDE];
 
         for (int i = 0; i < colorBytes.length; i++) {
-            colorBytes[i] = WHITE_BYTE;
+            colorBytes[0][i] = BLUE_BYTE;
         }
 
         redPaint.setColor(Color.RED);
@@ -63,6 +68,8 @@ public class ColorsView extends View {
     }
 
     public void setMessage(String msg) {
+        mCurrentChunkIdx = 0;
+
         message = msg;
 
         convertStringToColorBytes(message);
@@ -72,15 +79,27 @@ public class ColorsView extends View {
 
     public void convertStringToColorBytes(String str) {
         byte[] bytes = stringToBytesASCII(str);
+        int numChunks = (int) Math.ceil(bytes.length / (double) CHARS_PER_CHUNK);
 
-        colorBytes = new byte[bytes.length * NUM_COLORS];
+        Log.v(TAG, "num chunks : " + numChunks);
+
+        colorBytes = new byte[numChunks][bytes.length * COLORS_PER_CHAR];
 
         byte b;
 
+        byte colorByte;
+        int idx;
+        int chunk = 0;
+
         for (int i = 0; i < bytes.length; i++) {
             b = bytes[i];
-            for (int j = 0; j < NUM_COLORS; j++) {
-                colorBytes[(i * NUM_COLORS) + j] = (byte)((b >> (j * 2)) & 0b11);
+            chunk = i / CHARS_PER_CHUNK;
+            for (int j = 0; j < COLORS_PER_CHAR; j++) {
+                idx = ((i % CHARS_PER_CHUNK) * COLORS_PER_CHAR) + j;
+                colorByte = (byte) ((b >> (j * 2)) & 0b11);
+                // TODO: This will only work for 4 colors!!
+                //Log.v(TAG, "Assigning byte at " + idx + " to " + colorByte);
+                colorBytes[chunk][idx] = colorByte;
             }
         }
 
@@ -129,11 +148,17 @@ public class ColorsView extends View {
         canvas.drawRect(halfSquare, gridSize + halfSquare, halfSquare + gridSize, gridSize + squareSize, bluePaint);
         canvas.drawRect(gridSize + halfSquare, halfSquare, gridSize + squareSize, halfSquare + gridSize, bluePaint);
 
+        int idx;
+        byte colorByte;
+
         for (int y = 0; y < NUM_SQUARES_PER_SIDE; y++) {
             for (int x = 0; x < NUM_SQUARES_PER_SIDE; x++) {
-                paint.setColor(
-                        colorFromByte(
-                                colorBytes[Math.min(y * NUM_SQUARES_PER_SIDE + x, colorBytes.length - 1)]));
+                idx = Math.min(y * NUM_SQUARES_PER_SIDE + x, colorBytes[mCurrentChunkIdx].length - 1);
+                colorByte = colorBytes[mCurrentChunkIdx][idx];
+
+                //Log.v(TAG, "Drawing byte at " + idx + " to " + colorByte);
+
+                paint.setColor(colorFromByte(colorByte));
 
                 canvas.drawRect(halfSquare + x * squareSize,
                         halfSquare + y * squareSize,
@@ -142,5 +167,35 @@ public class ColorsView extends View {
                         paint);
             }
         }
+
+        if (mDrawStartTime == 0) {
+            mDrawStartTime = System.currentTimeMillis();
+        } else {
+            elapsed = (int) (System.currentTimeMillis() - mDrawStartTime);
+            newChunkIdx = (elapsed / MS_PER_MESSAGE) % colorBytes.length;
+
+            if (newChunkIdx != mCurrentChunkIdx) {
+                Log.v(TAG, "drawing chunk " + mCurrentChunkIdx + " after " + elapsed);
+            }
+
+            mCurrentChunkIdx = newChunkIdx;
+        }
+
+        invalidate();
+
+//        removeCallbacks(updateChunkRunnable);
+//        postDelayed(updateChunkRunnable, MS_PER_MESSAGE / 2);
     }
+
+    int elapsed = 0;
+    int newChunkIdx = 0;
+
+    Handler handler = new Handler();
+
+    final Runnable updateChunkRunnable = new Runnable() {
+        @Override
+        public void run() {
+            invalidate();
+        }
+    };
 }

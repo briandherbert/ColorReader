@@ -50,6 +50,7 @@ public class MainActivity extends FragmentActivity implements CameraFragment.Cam
             @Override
             public void onClick(View v) {
                 startActivity(new Intent(MainActivity.this, CreateActivity.class));
+                finish();
             }
         });
     }
