@@ -75,6 +75,7 @@ public class MainActivity extends FragmentActivity implements CameraFragment.Cam
         Toast.makeText(this, "camera inaccessible", Toast.LENGTH_LONG).show();
 
         startActivity(new Intent(MainActivity.this, CreateActivity.class));
+        finish();
         return;
     }
 

@@ -16,6 +16,8 @@ public class Constants {
     static final int NUM_SQUARES_PER_SIDE = 12;
     static final int NUM_COLORS = 4;
 
+    static final boolean IS_CHECKSUMMING = true;
+
     static final int COLORS_PER_CHAR = (NUM_COLORS == 4) ? 4 : 3;
     static final int CHARS_PER_CHUNK = ((NUM_SQUARES_PER_SIDE * NUM_SQUARES_PER_SIDE)) / COLORS_PER_CHAR;
 

@@ -39,6 +39,7 @@ public class ColorsView extends View {
     Paint bluePaint = new Paint();
     Paint whitePaint = new Paint();
 
+    int[] counts = {0, 0, 0, 0};
 
     public ColorsView(Context context) {
         super(context);
@@ -81,25 +82,27 @@ public class ColorsView extends View {
         byte[] bytes = stringToBytesASCII(str);
         int numChunks = (int) Math.ceil(bytes.length / (double) CHARS_PER_CHUNK);
 
-        Log.v(TAG, "num chunks : " + numChunks);
+        Log.v(TAG, "num chunks : " + numChunks +  " byte length " + bytes.length + " chars per chunk " + CHARS_PER_CHUNK);
 
-        colorBytes = new byte[numChunks][bytes.length * COLORS_PER_CHAR];
+        colorBytes = new byte[numChunks][CHARS_PER_CHUNK * COLORS_PER_CHAR];
 
         byte b;
 
         byte colorByte;
         int idx;
-        int chunk = 0;
+        int chunkIdx = 0;
 
         for (int i = 0; i < bytes.length; i++) {
             b = bytes[i];
-            chunk = i / CHARS_PER_CHUNK;
+            chunkIdx = i / CHARS_PER_CHUNK;
             for (int j = 0; j < COLORS_PER_CHAR; j++) {
                 idx = ((i % CHARS_PER_CHUNK) * COLORS_PER_CHAR) + j;
                 colorByte = (byte) ((b >> (j * 2)) & 0b11);
                 // TODO: This will only work for 4 colors!!
                 //Log.v(TAG, "Assigning byte at " + idx + " to " + colorByte);
-                colorBytes[chunk][idx] = colorByte;
+
+                counts[colorByte]++;
+                colorBytes[chunkIdx][idx] = colorByte;
             }
         }
 
