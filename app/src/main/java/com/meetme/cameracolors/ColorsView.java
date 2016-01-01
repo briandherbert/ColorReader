@@ -57,10 +57,10 @@ public class ColorsView extends View {
     }
 
     public void init() {
-        colorBytes = new byte[1][NUM_SQUARES_PER_SIDE * NUM_SQUARES_PER_SIDE];
+        colorBytes = new byte[1][CHARS_PER_CHUNK * COLORS_PER_CHAR];
 
-        for (int i = 0; i < colorBytes.length; i++) {
-            colorBytes[0][i] = BLUE_BYTE;
+        for (int i = 0; i < colorBytes[0].length; i++) {
+            colorBytes[0][i] = BLACK_BYTE;
         }
 
         redPaint.setColor(Color.RED);
@@ -80,11 +80,19 @@ public class ColorsView extends View {
 
     public void convertStringToColorBytes(String str) {
         byte[] bytes = stringToBytesASCII(str);
-        int numChunks = (int) Math.ceil(bytes.length / (double) CHARS_PER_CHUNK);
+
+        int adjustedCharsPerChunk = CHARS_PER_CHUNK - (IS_CHECKSUMMING ? 1 : 0);
+        int numChunks = (int) Math.ceil(bytes.length / (double) adjustedCharsPerChunk);
 
         Log.v(TAG, "num chunks : " + numChunks +  " byte length " + bytes.length + " chars per chunk " + CHARS_PER_CHUNK);
 
         colorBytes = new byte[numChunks][CHARS_PER_CHUNK * COLORS_PER_CHAR];
+
+        for (int c = 0; c < colorBytes.length; c++) {
+            for (int i = 0; i < colorBytes[c].length; i ++) {
+                colorBytes[c][i] = BLACK_BYTE;
+            }
+        }
 
         byte b;
 
@@ -94,9 +102,9 @@ public class ColorsView extends View {
 
         for (int i = 0; i < bytes.length; i++) {
             b = bytes[i];
-            chunkIdx = i / CHARS_PER_CHUNK;
+            chunkIdx = i / adjustedCharsPerChunk;
             for (int j = 0; j < COLORS_PER_CHAR; j++) {
-                idx = ((i % CHARS_PER_CHUNK) * COLORS_PER_CHAR) + j;
+                idx = ((i % adjustedCharsPerChunk) * COLORS_PER_CHAR) + j;
                 colorByte = (byte) ((b >> (j * 2)) & 0b11);
                 // TODO: This will only work for 4 colors!!
                 //Log.v(TAG, "Assigning byte at " + idx + " to " + colorByte);
@@ -178,13 +186,12 @@ public class ColorsView extends View {
             newChunkIdx = (elapsed / MS_PER_MESSAGE) % colorBytes.length;
 
             if (newChunkIdx != mCurrentChunkIdx) {
-                Log.v(TAG, "drawing chunk " + mCurrentChunkIdx + " after " + elapsed);
+                //Log.v(TAG, "drawing chunk " + mCurrentChunkIdx + " after " + elapsed);
+                mCurrentChunkIdx = newChunkIdx;
             }
-
-            mCurrentChunkIdx = newChunkIdx;
         }
 
-        invalidate();
+        if (!message.isEmpty()) invalidate();
 
 //        removeCallbacks(updateChunkRunnable);
 //        postDelayed(updateChunkRunnable, MS_PER_MESSAGE / 2);

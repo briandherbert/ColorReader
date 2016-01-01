@@ -8,8 +8,8 @@ import android.util.Log;
  */
 public class Line {
     String TAG = "Line";
-    public Point start = new Point();
-    public Point end = new Point();
+    public Point start = new Point(0, 0);
+    public Point end = new Point(0, 0);
 
     int length = 0;
     double slope = 0;

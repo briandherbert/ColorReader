@@ -7,11 +7,11 @@ import android.graphics.Color;
  */
 public class Constants {
     // Camera
-    static final int CAMERA_MIN_RESOLUTION_SIDE = 160;
+    static final int CAMERA_MIN_RESOLUTION_SIDE = 100;
     static final int CAMERA_MIN_RESOLUTION = CAMERA_MIN_RESOLUTION_SIDE * CAMERA_MIN_RESOLUTION_SIDE;
     static final int AUTOFOCUS_DELAY_MS = 4000;
 
-    static final int MS_PER_MESSAGE = 500;
+    static final int MS_PER_MESSAGE = 2000;
 
     static final int NUM_SQUARES_PER_SIDE = 12;
     static final int NUM_COLORS = 4;
@@ -69,6 +69,29 @@ public class Constants {
                 return "white";
             default:
                 return "unknown";
+        }
+    }
+
+    public static byte colorByteFromColor(int color) {
+        switch (color) {
+            case Color.RED:
+                return RED_BYTE;
+            case Color.GREEN:
+                return GREEN_BYTE;
+            case Color.BLUE:
+                return BLUE_BYTE;
+            case Color.CYAN:
+                return CYAN_BYTE;
+            case Color.MAGENTA:
+                return MAGENTA_BYTE;
+            case Color.YELLOW:
+                return YELLOW_BYTE;
+            case Color.BLACK:
+                return BLACK_BYTE;
+            case Color.WHITE:
+                return WHITE_BYTE;
+            default:
+                return BLACK_BYTE;
         }
     }
 
