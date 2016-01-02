@@ -38,7 +38,6 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
     public static final String TAG = "CameraFragment";
 
     boolean showBmp = false;
-    boolean snapshotMode = false;
 
     private CameraPreviewSurface mPreviewSurface;
 
@@ -57,8 +56,6 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
     private View mRootView;
 
     int rotationNeeded = 0;
-
-    boolean isFast = false;
 
     @Override
     public void onAttach(Context context) {
@@ -97,7 +94,8 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
             @Override
             public void onClick(View v) {
                 showBmp = true;
-                snapshotMode = true;
+                mIsRecording = false;
+                mBtnRecord.setText(mIsRecording ? "Stop" : "Start");
             }
         });
 
@@ -146,10 +144,11 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
     int frames = 0;
     boolean mIsRecording = false;
 
-    int height, width;
+    int height = 0;
+    int width = 0;
+    int smallerDimen = 0;
     int[] pixels;
     Bitmap copy;
-    byte[][] bmpByteColors;
     Bitmap yuvBitmap;
 
     static final String STATS_TAG = TAG + ":stats";
@@ -163,20 +162,26 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
             t0 = System.currentTimeMillis();
         }
 
-        if (!mIsRecording || (snapshotMode && !showBmp)) return;
+        if (!mIsRecording && !showBmp) return;
 
-        height = mPreviewSurface.getPreviewWidth();
-        width = mPreviewSurface.getPreviewHeight();
-        minMaxStreak = (int) (width * STREAK_MIN_PCT_WIDTH);
+        // Init size dependent vars
+        if (height == 0) {
+            height = mPreviewSurface.getPreviewWidth();
+            width = mPreviewSurface.getPreviewHeight();
+            Log.v(STATS_TAG, "Width " + width + " height " + height);
 
-        Log.v(STATS_TAG, "Width " + width + " height " + height);
-
-        if (bmpByteColors == null) {
-            bmpByteColors = new byte[width][height];
             pixels = new int[width * height];
+
+            smallerDimen = Math.min(height, width);
+
+            minMaxStreak = (int) (smallerDimen * STREAK_MIN_PCT_WIDTH);
+            MAX_STREAK_DEPTH = (smallerDimen / NUM_SQUARES_PER_SIDE) / 2.0;
+
+            streakStartX = width / 2;
         }
 
         long t0 = System.nanoTime();
+        long t0prime = System.nanoTime();
 
         // Convert bytes first to YUV image, then to RGB
         YuvImage yuvImage = new YuvImage(bytes, ImageFormat.NV21, width, height, null);
@@ -193,7 +198,12 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
 
         t0 = System.nanoTime();
 
-        roundColorsAndGetStreaks();
+        if (showBmp) {
+            roundAllColors();
+            getStreaks();
+        } else {
+            getStreaks();
+        }
 
         Log.v(STATS_TAG, "roundColorsAndGetStreaks took " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - t0) + " show bmp? " + showBmp);
         t0 = System.nanoTime();
@@ -225,6 +235,7 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
         getMessage();
 
         Log.v(TAG, "getMessage took " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - t0));
+        Log.v(TAG, "successful message took " + TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - t0prime) + " show bmp? " + showBmp);
 
         if (showBmp) mImgPreview.setImageBitmap(copy);
         showBmp = false;
@@ -240,10 +251,6 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
 
     int r, g, b;
     int pxColor;
-    int streak = 0;
-    int maxStreak = 0;
-    Boolean onStreak = null;
-    int streakColor = Color.BLACK;
     int minMaxStreak;
 
     Point point = new Point();
@@ -300,150 +307,87 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
     /**
      * Scan horizontally, looking for horizontal streaks, rounding colors as we go
      */
-    public void roundColorsAndGetStreaks() {
+    public void roundAllColors() {
         Log.v(TAG, "roundColorsAndGetStreaks");
-
-        // Reset values
-        maxStreak = 0;
-        r = g = b = 0;
-        for (int i = 0; i < lines.length; i++) lines[i].set(0, 0, 0);
-
 
         // Round colors to r, g, b, white, black
         for (int h = 0; h < height; h++) {
-            streak = 0;
-            onStreak = null;
-            streakColor = Color.BLACK;
-
             // Go across a row
             for (int w = 0; w < width; w++) {
-                pxColor = pixels[h * width + w];
-
-                r = Color.red(pxColor);
-                g = Color.green(pxColor);
-                b = Color.blue(pxColor);
-
-                max = Math.max(Math.max(r, g), b);
-
-                numFloors = 0;
-
-                if (max - r > RGB_VAL_DIFF_THRESHHOLD) {
-                    r = 0;
-                    numFloors++;
-                }
-
-                if (max - g > RGB_VAL_DIFF_THRESHHOLD) {
-                    g = 0;
-                    numFloors++;
-                }
-
-                if (max - b > RGB_VAL_DIFF_THRESHHOLD) {
-                    b = 0;
-                    numFloors++;
-                }
-
-                if (numFloors == 2) {
-                    pxColor = r > 0 ? Color.RED : g > 0 ? Color.GREEN : Color.BLUE;
-
-                    if (streakColor == Color.BLACK && (pxColor == Color.RED || pxColor == Color.GREEN || pxColor == Color.BLUE)) {
-                        streakColor = pxColor;
-                    }
-                } else if (NUM_COLORS == 8 && numFloors == 1) {
-                    pxColor = r == 0 ? Color.CYAN : g == 0 ? Color.MAGENTA : Color.YELLOW;
-                } else if ((numFloors == 0 || numFloors == 1) && max > WHITE_MIN_VAL) {
-                    pxColor = Color.WHITE;
-                } else {
-                    pxColor = Color.BLACK;
-                }
-
-                bmpByteColors[w][h] = colorByteFromColor(pxColor);
-
-                if (pxColor != Color.BLACK && pxColor == streakColor) {
-                    if (streak == 0) point.set(w, h);
-
-                    streak++;
-                    onStreak = true;
-                } else if (onStreak != null && onStreak) {
-                    onStreak = false;
-                } else if (onStreak != null) {
-                    onStreak = null;
-
-                    if (streak > 0) {   // ended streak
-                        if (streak > lines[idxFromColor(streakColor)].length) {
-                            lines[idxFromColor(streakColor)].set(point.x, w - 1, point.y);
-                        }
-
-                        streak = 0;
-                    }
-
-                    streakColor = Color.BLACK;
-                }
-
                 // TODO: Remove this, it slows us wayyyy down
-                if (showBmp) copy.setPixel(w, h, pxColor);
+                if (showBmp) copy.setPixel(w, h, colorFromByte(getByteColorAt(w, h)));
             }
         }
-
-        nonBlueColorByte = lines[RED_BYTE].length > lines[GREEN_BYTE].length ? RED_BYTE : GREEN_BYTE;
-        topColorByte = lines[nonBlueColorByte].start.y < lines[BLUE_BYTE].start.y ? nonBlueColorByte : BLUE_BYTE;
-        bottomColorByte = (topColorByte == BLUE_BYTE) ? nonBlueColorByte : BLUE_BYTE;
     }
 
-    static final double STREAK_MIN_PCT_WIDTH = .5;
+    static final double STREAK_MIN_PCT_WIDTH = .7;
+    double MAX_STREAK_DEPTH;
 
+    public void getStreaks() {
+        Log.v(TAG, "getStreaks");
 
-    public boolean getStreaks() {
-        topColorByte = BLACK_BYTE;
+        for (int i = 0; i < lines.length; i++) lines[i].set(0, 0, 0);
 
         int topY = 0;
         int bottomY = 0;
 
+        boolean hitValidStreak = false;
+        int countAfterStreak = 0;
+
         // Scan down from the horizontal center looking for colors
-        for (topY = 0; topY < height - minMaxStreak && topColorByte != BLACK_BYTE; topY++) {
-            topColorByte = getConsecutiveStreakColor(topY);
+        for (topY = 0; topY < height - minMaxStreak; topY++) {
+            if (hitValidStreak) {
+                countAfterStreak++;
+            }
+
+            if (findLongestStreak(topY) >= minMaxStreak) {
+                hitValidStreak = true;
+            }
+
+            if (countAfterStreak > MAX_STREAK_DEPTH) {
+                break;
+            }
         }
 
-        if (topColorByte == BLACK_BYTE) {
-            Log.v(MARKER_SPANS_TAG, "No top streak found!");
-            return false;
-        }
+        hitValidStreak = false;
+        countAfterStreak = 0;
 
-        for (bottomY = height - 1; bottomY > topY && bottomColorByte != BLACK_BYTE; bottomY--) {
-            bottomColorByte = getConsecutiveStreakColor(bottomY);
-        }
+        for (bottomY = height - 1; bottomY > topY && bottomY >= minMaxStreak; bottomY--) {
+            findLongestStreak(bottomY);
 
-        if (bottomColorByte == BLACK_BYTE) {
-            Log.v(MARKER_SPANS_TAG, "No bottom streak found!");
-            return false;
-        }
+            drawPoint(streakStartX, bottomY);
 
-        nonBlueColorByte = topColorByte != BLUE_BYTE ? topColorByte : bottomColorByte;
-        return true;
+            if (hitValidStreak) {
+                countAfterStreak++;
+            }
+
+            if (findLongestStreak(bottomY) >= minMaxStreak) {
+                hitValidStreak = true;
+            }
+
+            if (countAfterStreak > MAX_STREAK_DEPTH) {
+                break;
+            }
+        }
     }
+
+    int streakStartX = width / 2;
+    byte streakColorByte;
+
+    int streakLeftX = streakStartX - 1;
+    int streakRightX = streakStartX + 1;
 
     /**
      * Returns the color of a valid streak if there's also a line of the same color and approx length
      */
-    public byte getConsecutiveStreakColor(int y) {
-        int minValidStreakLength = (int) (width * STREAKS_DIFF_PCT);
-        int wiggle = (int) (width * STREAKS_DIFF_PCT);
-
-        int x = width / 2;
-        byte colorByte;
-
-        int leftX = x - 1;
-        int rightX = x + 1;
-        int currentLength;
-
+    public int findLongestStreak(int y) {
         boolean strike = false;
 
-        colorByte = bmpByteColors[x][y];
-        if (colorByte != BLACK_BYTE && colorByte != WHITE_BYTE) {
-            // We hit a color; see if our streak is long enough
-
+        streakColorByte = getByteColorAt(streakStartX, y);
+        if (streakColorByte != BLACK_BYTE && streakColorByte != WHITE_BYTE) {
             // To the left
-            for (; leftX > 0; leftX--) {
-                if (bmpByteColors[leftX][y] != colorByte) {
+            for (streakLeftX = streakStartX - 1; streakLeftX > 0; streakLeftX--) {
+                if (getByteColorAt(streakLeftX, y) != streakColorByte) {
                     if (strike) {
                         break;
                     } else {
@@ -457,8 +401,8 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
             strike = false;
 
             // To the right
-            for (; rightX < width; rightX++) {
-                if (bmpByteColors[rightX][y] != colorByte) {
+            for (streakRightX = streakStartX + 1; streakRightX < width; streakRightX++) {
+                if (getByteColorAt(streakRightX, y) != streakColorByte) {
                     if (strike) {
                         break;
                     } else {
@@ -469,26 +413,18 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
                 }
             }
 
-            leftX++;
-            rightX--;
+            streakLeftX++;
+            streakRightX--;
 
             // Check the length
-            currentLength = rightX - leftX;
-            if (rightX - leftX >= minValidStreakLength) {
-                if (lines[colorByte].length < minValidStreakLength) {
-                    lines[colorByte].set(leftX, rightX, y);
-                } else if (Math.abs(currentLength - lines[colorByte].length) < wiggle
-                        && Math.abs(y - lines[colorByte].start.y) == 1) {
-                    // Last one was valid, close in length to this one, and y-adjacent, so we're good
-                    lines[colorByte].set(leftX, rightX, y);
-
-                    //drawLine(lines[colorByte]);
-                    return colorByte;
-                }
+            if (streakRightX - streakLeftX > lines[streakColorByte].length) {
+                lines[streakColorByte].set(streakLeftX, streakRightX, y);
             }
+
+            return streakRightX - streakLeftX;
         }
 
-        return BLACK_BYTE;
+        return 0;
     }
 
     static final String MARKER_SPANS_TAG = TAG + "marker";
@@ -508,6 +444,9 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
      */
     boolean findMarkerSpans() {
         Log.v(TAG, "findMarkerSpans");
+        nonBlueColorByte = lines[RED_BYTE].length > lines[GREEN_BYTE].length ? RED_BYTE : GREEN_BYTE;
+        topColorByte = lines[nonBlueColorByte].start.y < lines[BLUE_BYTE].start.y ? nonBlueColorByte : BLUE_BYTE;
+        bottomColorByte = (topColorByte == BLUE_BYTE) ? nonBlueColorByte : BLUE_BYTE;
 
         Log.v(MARKER_SPANS_TAG, "max streaks - red: " + lines[RED_BYTE].length + ", green: " + lines[GREEN_BYTE].length + ", blue: " + lines[BLUE_BYTE].length);
 
@@ -584,7 +523,7 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
                 if (!isPointValid(yPoints[i])) continue;
 
                 for (int j = 0; j < approxSquareSize; j++) {
-                    if (bmpByteColors[yPoints[i].x][yPoints[i].y] == WHITE_BYTE) {
+                    if (getByteColorAt(yPoints[i].x, yPoints[i].y) == WHITE_BYTE) {
                         yPointsHitWhite[i] = Boolean.FALSE;
                     } else if (Boolean.FALSE == yPointsHitWhite[i]) {
                         yPointsHitWhite[i] = true;
@@ -651,7 +590,7 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
                     coordX = (int) (corner.isLeft() ? origin.x + Math.round(x * approxSquareSize) : origin.x - Math.round(x * approxSquareSize));
                     drawPoint(coordX, coordY);
 
-                    colorByte = bmpByteColors[coordX][coordY];
+                    colorByte = getByteColorAt(coordX, coordY);
 
                     if (Corner.topLeft == corner) {
                         colorBytes[x][y] = colorByte;

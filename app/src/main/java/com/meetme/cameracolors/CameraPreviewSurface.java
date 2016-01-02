@@ -61,7 +61,7 @@ public class CameraPreviewSurface extends SurfaceView implements SurfaceHolder.C
 
         Size previewSize = mCamera.getParameters().getPreviewSize();
 
-        Log.v("blarg", "bits / px " + ImageFormat.getBitsPerPixel(mCamera.getParameters().getPreviewFormat()));
+        Log.v(TAG, "bits / px " + ImageFormat.getBitsPerPixel(mCamera.getParameters().getPreviewFormat()));
 
         // If the camera is sideways, swap width and height
         final float pw = mIsCameraSideways ? previewSize.height : previewSize.width;
@@ -73,7 +73,7 @@ public class CameraPreviewSurface extends SurfaceView implements SurfaceHolder.C
         // We want to scale so that the entire preview fits in our bounds
         float scale = (sw / sh > pw / ph) ? sh / ph : sw / pw;
 
-        Log.v("blarg", "size " + pw + ", " + ph);
+        Log.v(TAG, "size " + pw + ", " + ph);
 
         previewWidth = (int) pw;
         previewHeight = (int) ph;
@@ -96,7 +96,7 @@ public class CameraPreviewSurface extends SurfaceView implements SurfaceHolder.C
             mCamera.setOneShotPreviewCallback(new Camera.PreviewCallback() {
                 @Override
                 public void onPreviewFrame(byte[] data, Camera camera) {
-                    Log.v("blarg", "first preview frame, buffer size " + data.length);
+                    Log.v(TAG, "first preview frame, buffer size " + data.length);
 
                     if (CameraUtils.shouldCallAutofocus()) postDelayed(focusRunnable, AUTOFOCUS_DELAY_MS);
 
