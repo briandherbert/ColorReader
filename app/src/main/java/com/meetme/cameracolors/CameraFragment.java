@@ -175,7 +175,6 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
             smallerDimen = Math.min(height, width);
 
             minMaxStreak = (int) (smallerDimen * STREAK_MIN_PCT_WIDTH);
-            MAX_STREAK_DEPTH = (smallerDimen / NUM_SQUARES_PER_SIDE) / 2.0;
 
             streakStartX = width / 2;
         }
@@ -321,7 +320,6 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
     }
 
     static final double STREAK_MIN_PCT_WIDTH = .7;
-    double MAX_STREAK_DEPTH;
 
     public void getStreaks() {
         Log.v(TAG, "getStreaks");
@@ -330,42 +328,27 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
 
         int topY = 0;
         int bottomY = 0;
-
         boolean hitValidStreak = false;
-        int countAfterStreak = 0;
 
         // Scan down from the horizontal center looking for colors
         for (topY = 0; topY < height - minMaxStreak; topY++) {
-            if (hitValidStreak) {
-                countAfterStreak++;
-            }
-
             if (findLongestStreak(topY) >= minMaxStreak) {
                 hitValidStreak = true;
-            }
-
-            if (countAfterStreak > MAX_STREAK_DEPTH) {
+            } else if (hitValidStreak) {
                 break;
             }
         }
 
         hitValidStreak = false;
-        countAfterStreak = 0;
 
         for (bottomY = height - 1; bottomY > topY && bottomY >= minMaxStreak; bottomY--) {
             findLongestStreak(bottomY);
 
             drawPoint(streakStartX, bottomY);
 
-            if (hitValidStreak) {
-                countAfterStreak++;
-            }
-
             if (findLongestStreak(bottomY) >= minMaxStreak) {
                 hitValidStreak = true;
-            }
-
-            if (countAfterStreak > MAX_STREAK_DEPTH) {
+            } else if (hitValidStreak) {
                 break;
             }
         }
@@ -382,13 +365,19 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
      */
     public int findLongestStreak(int y) {
         boolean strike = false;
+        byte byteColor = BLACK_BYTE;
 
         streakColorByte = getByteColorAt(streakStartX, y);
         if (streakColorByte != BLACK_BYTE && streakColorByte != WHITE_BYTE) {
             // To the left
             for (streakLeftX = streakStartX - 1; streakLeftX > 0; streakLeftX--) {
-                if (getByteColorAt(streakLeftX, y) != streakColorByte) {
+                byteColor = getByteColorAt(streakLeftX, y);
+                if (byteColor != streakColorByte) {
                     if (strike) {
+                        if (byteColor != WHITE_BYTE) {
+                            return 0;
+                        }
+
                         break;
                     } else {
                         strike = true;
@@ -398,12 +387,18 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
                 }
             }
 
+            byteColor = BLACK_BYTE;
             strike = false;
 
             // To the right
             for (streakRightX = streakStartX + 1; streakRightX < width; streakRightX++) {
-                if (getByteColorAt(streakRightX, y) != streakColorByte) {
+                byteColor = getByteColorAt(streakRightX, y);
+                if (byteColor != streakColorByte) {
                     if (strike) {
+                        if (byteColor != WHITE_BYTE) {
+                            return 0;
+                        }
+
                         break;
                     } else {
                         strike = true;
@@ -413,8 +408,8 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
                 }
             }
 
-            streakLeftX++;
-            streakRightX--;
+            streakLeftX += 2;
+            streakRightX -= 2;
 
             // Check the length
             if (streakRightX - streakLeftX > lines[streakColorByte].length) {
@@ -429,7 +424,7 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
 
     static final String MARKER_SPANS_TAG = TAG + "marker";
 
-    byte nonBlueColorByte = BLACK_BYTE;
+    //byte nonBlueColorByte = BLACK_BYTE;
     byte topColorByte = BLACK_BYTE;
     byte bottomColorByte = BLACK_BYTE;
 
@@ -444,7 +439,7 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
      */
     boolean findMarkerSpans() {
         Log.v(TAG, "findMarkerSpans");
-        nonBlueColorByte = lines[RED_BYTE].length > lines[GREEN_BYTE].length ? RED_BYTE : GREEN_BYTE;
+        byte nonBlueColorByte = lines[RED_BYTE].length > lines[GREEN_BYTE].length ? RED_BYTE : GREEN_BYTE;
         topColorByte = lines[nonBlueColorByte].start.y < lines[BLUE_BYTE].start.y ? nonBlueColorByte : BLUE_BYTE;
         bottomColorByte = (topColorByte == BLUE_BYTE) ? nonBlueColorByte : BLUE_BYTE;
 
@@ -462,8 +457,8 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
 
         Log.v(MARKER_SPANS_TAG, "non blue color is " + getColorNameFromColor(colorFromByte(nonBlueColorByte)) + "; top? " + (topColorByte == nonBlueColorByte));
 
-        drawLine(lines[BLUE_BYTE]);
-        drawLine(lines[nonBlueColorByte]);
+        drawLine(lines[topColorByte]);
+        drawLine(lines[bottomColorByte]);
 
         // Validation steps
         int wiggle = (int) (width * STREAKS_DIFF_PCT);
@@ -608,7 +603,7 @@ public class CameraFragment extends Fragment implements CameraHelper.CameraHelpe
 
     void rotateByteColors() {
         if (topColorByte == BLUE_BYTE) {
-            if (nonBlueColorByte == RED_BYTE) {
+            if (bottomColorByte == RED_BYTE) {
                 rotationNeeded = 180;
             } else {
                 rotationNeeded = 90;

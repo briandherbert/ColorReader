@@ -7,7 +7,7 @@ import android.graphics.Color;
  */
 public class Constants {
     // Camera
-    static final int CAMERA_MIN_RESOLUTION_SIDE = 300;
+    static final int CAMERA_MIN_RESOLUTION_SIDE = 500;
     static final int CAMERA_MIN_RESOLUTION = CAMERA_MIN_RESOLUTION_SIDE * CAMERA_MIN_RESOLUTION_SIDE;
     static final int AUTOFOCUS_DELAY_MS = 4000;
 
